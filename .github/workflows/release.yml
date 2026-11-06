@@ -1,0 +1,80 @@
+# Build a DKMS package for the last two releases of Fedora, Debian and Ubuntu.
+# Pushing a tag vX.Y.Z publishes them, with a source tarball, as a GitHub
+# release; the tag must match PACKAGE_VERSION in src/dkms.conf. Running it by
+# hand only builds them, as workflow artifacts. When a distribution has a new
+# release, update the matrix.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Fedora 45,    image: "registry.fedoraproject.org/fedora:45" }
+          - { name: Fedora 44,    image: "registry.fedoraproject.org/fedora:44" }
+          - { name: Debian 13,    image: "docker.io/library/debian:13" }
+          - { name: Debian 12,    image: "docker.io/library/debian:12" }
+          - { name: Ubuntu 26.10, image: "docker.io/library/ubuntu:26.10" }
+          - { name: Ubuntu 26.04, image: "docker.io/library/ubuntu:26.04" }
+    steps:
+      - name: Install what checkout and packaging need
+        run: |
+          if command -v dnf >/dev/null; then
+            dnf -y -q install git tar gzip rpm-build findutils
+          else
+            apt-get -qq update
+            apt-get -qq install -y git dpkg-dev >/dev/null
+          fi
+      - uses: actions/checkout@v4
+      - name: Check the tag matches the version
+        if: github.ref_type == 'tag'
+        run: |
+          ver=$(sed -n 's/^PACKAGE_VERSION=//p' src/dkms.conf)
+          [ "$GITHUB_REF_NAME" = "v$ver" ] || { echo "tag $GITHUB_REF_NAME, but src/dkms.conf says $ver"; exit 1; }
+      # against this distribution's own kernel headers, so a break shows here
+      - name: Build the module
+        run: tools/ci-build.sh
+      - name: Build the package
+        run: packaging/build-package.sh dist
+      - name: Install the package and check DKMS built it
+        run: tools/package-smoke-test.sh dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: package
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Source tarball
+        run: git archive --format=tar.gz --prefix="hwsvideo-${GITHUB_REF_NAME#v}/" -o "artifacts/hwsvideo-${GITHUB_REF_NAME#v}.tar.gz" HEAD
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --verify-tag \
+                 --notes "See [CHANGELOG.md](CHANGELOG.md) and the README's install steps."
+          gh release upload "$GITHUB_REF_NAME" artifacts/* --clobber

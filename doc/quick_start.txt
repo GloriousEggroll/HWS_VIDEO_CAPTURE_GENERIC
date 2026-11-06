@@ -1,0 +1,48 @@
+
+What's here
+===========
+Quick start with the official  HWS  Caputre Card Driver on Linux.
+
+Install
+===========
+Open a terminal then execute the installation script:
+
+If your system requires module signing (most distributions):
+	$ cd <path-to-package-base-directory>
+	$ ./dkms-install.sh
+else:
+	$ cd <path-to-package-base-directory>
+	$ ./install.sh
+
+*IMPORTANT: The installer scripts may fail if there are spaces in the full path. Please make sure there are no spaces in the path:
+
+Good path:
+	/home/someuser/Downloads/AVMATRIX-VC12-4K-CAPTURE/
+
+Bad path:
+    /home/someuser/Downloads/AVMATRIX VC12 4K CAPTURE/
+
+After a successful installation, you should see something similar to:
+
+========================================================
+
+Install Successfully!"
+For more information please check the docs directory or"
+contact alex.liu@longtimetech.com."
+
+========================================================
+
+After this, you must reboot the system for the new driver module to take effect.
+
+To use:
+
+Install obs-studio.
+
+Sources > Video Capture Device (V4L2) > HVideo1 (HWS)
+
+Uninstall:
+===========
+$ ./scripts/hws-uninstall.sh
+
+
+
