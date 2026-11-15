@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Build the DKMS package for the distribution this runs on: an .rpm on Fedora,
-# a .deb on Debian and Ubuntu. The package holds the driver's sources, and DKMS
+# a .deb on Debian and Ubuntu, a .pkg.tar.zst on Arch and CachyOS.
+# The package holds the driver's sources, and DKMS
 # builds the module on the machine it's installed on, for each kernel.
 #
 # Usage: packaging/build-package.sh OUTPUT_DIR
-# Needs rpm-build on Fedora, dpkg-dev on Debian and Ubuntu.
+# Needs rpm-build on Fedora, dpkg-dev on Debian and Ubuntu, base-devel and dkms
+# on Arch/CachyOS. Run as a regular user on Arch/CachyOS.
 set -euo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
@@ -27,6 +29,36 @@ stage() {
 }
 
 case "$ID" in
+    arch|cachyos)
+        if (( EUID == 0 )); then
+            echo "makepkg must run as a regular user; rerun without sudo" >&2
+            exit 1
+        fi
+        command -v makepkg >/dev/null || { echo "install base-devel and dkms first" >&2; exit 1; }
+        # Snapshot only package inputs, including uncommitted edits. Reuse the
+        # AUR recipe's metadata, DKMS preparation and package() function, but
+        # replace its pinned Git source and upstream compatibility patch.
+        mkdir -p "$WORK/hwsvideo/src" "$WORK/hwsvideo/packaging"
+        find "$REPO/src" -maxdepth 1 -type f \( -name '*.c' -o -name '*.h' -o -name Makefile -o -name dkms.conf \) \
+            ! -name '*.mod.c' -exec install -m 644 -t "$WORK/hwsvideo/src" {} +
+        install -m 644 "$REPO/README.md" "$REPO/CHANGELOG.md" "$WORK/hwsvideo/"
+        install -m 644 "$REPO/packaging/hwsvideo.modprobe.conf" "$WORK/hwsvideo/packaging/"
+        tar -czf "$WORK/checkout.tar.gz" -C "$WORK" hwsvideo
+        cp "$REPO/packaging/aur/hwsvideo-dkms/PKGBUILD" "$WORK/PKGBUILD"
+        cp "$REPO/packaging/aur/hwsvideo-dkms/hwsvideo-dkms.install" "$WORK/"
+        {
+            printf '\npkgver=%q\n' "$VER"
+            echo "makedepends=()"
+            echo "source=('checkout.tar.gz')"
+            printf "sha256sums=('%s')\n" "$(sha256sum "$WORK/checkout.tar.gz" | cut -d ' ' -f 1)"
+            echo 'prepare() { prepare_dkms; }'
+        } >> "$WORK/PKGBUILD"
+        (
+            cd "$WORK"
+            PKGDEST="$OUT" SRCDEST="$WORK" BUILDDIR="$WORK" PKGEXT=.pkg.tar.zst \
+                makepkg --force
+        )
+        ;;
     fedora)
         stage "$WORK/root"
         rpmbuild -bb "$REPO/packaging/hwsvideo-dkms.spec" \

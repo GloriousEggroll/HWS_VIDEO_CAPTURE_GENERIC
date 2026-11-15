@@ -92,10 +92,10 @@ static void hws_unregister_video(struct hws_pcie_dev *dev);
 /* What the card can lock to: HDMI 2.0 up to 4096x2160 (3840 if DMA buffers had to stay at 4 MiB). */
 static const struct v4l2_dv_timings_cap hws_timings_cap_uhd = {
 	.type = V4L2_DV_BT_656_1120,
-	V4L2_INIT_BT_TIMINGS(640, HWS_UHD_MAX_W, 480, HWS_UHD_MAX_H, 13500000, 600000000,
+	.bt = { 640, HWS_UHD_MAX_W, 480, HWS_UHD_MAX_H, 13500000, 600000000,
 		V4L2_DV_BT_STD_CEA861 | V4L2_DV_BT_STD_DMT | V4L2_DV_BT_STD_CVT | V4L2_DV_BT_STD_GTF,
 		V4L2_DV_BT_CAP_PROGRESSIVE | V4L2_DV_BT_CAP_INTERLACED |
-		V4L2_DV_BT_CAP_REDUCED_BLANKING | V4L2_DV_BT_CAP_CUSTOM)
+		V4L2_DV_BT_CAP_REDUCED_BLANKING | V4L2_DV_BT_CAP_CUSTOM }
 };
 
 /*
@@ -105,10 +105,10 @@ static const struct v4l2_dv_timings_cap hws_timings_cap_uhd = {
  */
 static const struct v4l2_dv_timings_cap hws_timings_cap_hd = {
 	.type = V4L2_DV_BT_656_1120,
-	V4L2_INIT_BT_TIMINGS(640, HWS_HD_MAX_W, 480, HWS_HD_MAX_H, 13500000, 165000000,
+	.bt = { 640, HWS_HD_MAX_W, 480, HWS_HD_MAX_H, 13500000, 165000000,
 		V4L2_DV_BT_STD_CEA861 | V4L2_DV_BT_STD_DMT | V4L2_DV_BT_STD_CVT | V4L2_DV_BT_STD_GTF,
 		V4L2_DV_BT_CAP_PROGRESSIVE | V4L2_DV_BT_CAP_INTERLACED |
-		V4L2_DV_BT_CAP_REDUCED_BLANKING | V4L2_DV_BT_CAP_CUSTOM)
+		V4L2_DV_BT_CAP_REDUCED_BLANKING | V4L2_DV_BT_CAP_CUSTOM }
 };
 
 /* see enum hws_family */

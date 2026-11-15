@@ -1,0 +1,43 @@
+# Pacman runs this before its post-transaction DKMS build hook, so a signing
+# certificate may not exist yet. Do not assume the default key is in use.
+post_install() {
+    local state=unknown value var
+    for var in /sys/firmware/efi/efivars/SecureBoot-*; do
+        [ -r "$var" ] || continue
+        value=$(od -An -tu1 -j4 -N1 "$var" 2>/dev/null)
+        case "$value" in
+            *1*) state=enabled ;;
+            *0*) state=disabled ;;
+        esac
+        break
+    done
+    if [ "$state" = unknown ] && command -v mokutil >/dev/null; then
+        value=$(LC_ALL=C mokutil --sb-state 2>/dev/null)
+        case "$value" in
+            *'SecureBoot enabled'*) state=enabled ;;
+            *'SecureBoot disabled'*) state=disabled ;;
+        esac
+    fi
+
+    echo 'hwsvideo: Check the DKMS build results below before rebooting.'
+    echo 'hwsvideo: Headers matching each target kernel must be installed.'
+    if [ "$state" != disabled ]; then
+        echo "hwsvideo: Secure Boot state: $state. A signature alone does not establish trust."
+        echo 'hwsvideo: If your kernel enforces module signatures, it must trust the DKMS signing certificate.'
+        echo 'hwsvideo: DKMS prints the certificate path during its build; custom keys may be configured.'
+        echo 'hwsvideo: With shim/MOK, install mokutil and run: sudo mokutil --import <certificate-path>'
+        echo 'hwsvideo: Then reboot and complete enrollment in MOK Manager with the password you chose.'
+        echo 'hwsvideo: The default certificate is /var/lib/dkms/mok.pub, generated during the DKMS build.'
+        echo 'hwsvideo: Without shim/MOK, configure DKMS to sign with a key your kernel trusts.'
+        echo 'hwsvideo: Firmware boot signing (e.g. sbctl) alone does not guarantee module trust.'
+    fi
+    echo 'hwsvideo: This package blacklists the competing hws capture driver.'
+    echo 'hwsvideo: A build or trust failure can leave the capture card unavailable after reboot.'
+    echo 'hwsvideo: To revert: sudo pacman -R hwsvideo-dkms; then reboot.'
+    echo 'hwsvideo: No boot keys, bootloader settings, or initramfs are changed by this package.'
+    return 0
+}
+
+post_upgrade() {
+    post_install
+}
