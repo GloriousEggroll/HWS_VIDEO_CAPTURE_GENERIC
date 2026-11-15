@@ -1,0 +1,55 @@
+# Maintainer: Scyllinice <https://github.com/Scyllinice>
+pkgname=hwsvideo-dkms
+pkgver=1.3.0
+pkgrel=1
+install=hwsvideo-dkms.install
+pkgdesc='V4L2 and ALSA driver for HWS PCIe capture cards (AVMatrix and ACASIS)'
+arch=('x86_64')
+url='https://github.com/Scyllinice/HWS_VIDEO_CAPTURE_GENERIC'
+license=('GPL-3.0-only')
+depends=('dkms')
+makedepends=('git')
+optdepends=('linux-headers: build for the standard Arch kernel'
+            'linux-lts-headers: build for the Arch LTS kernel'
+            'clang: build for kernels compiled with Clang'
+            'llvm: build for kernels compiled with Clang'
+            'lld: link modules for kernels compiled with Clang'
+            'mokutil: inspect Secure Boot state and enroll a certificate with shim/MOK')
+backup=('etc/modprobe.d/hwsvideo.conf')
+options=('!strip' '!debug')
+_commit=ecf600c0ecdfb5044a5080180be95a164065690f
+source=("hwsvideo::git+${url}.git#commit=${_commit}"
+        'clang-timings.patch')
+sha256sums=('SKIP'
+            '53a69ec217c6a348610bd5d1ea346d14e530b2d2c5ecd0d367b7b94137f358bd')
+
+prepare() {
+    cd "$srcdir/hwsvideo"
+    # The timings macro has a legacy GCC workaround which breaks with Clang.
+    patch -Np1 -i "$srcdir/clang-timings.patch"
+    prepare_dkms
+}
+
+# Also used by build-package.sh when packaging the current checkout.
+prepare_dkms() {
+    cd "$srcdir/hwsvideo"
+    # DKMS must use the target kernel, including when it is not running.
+    sed -i "/^MAKE=/c\\MAKE[0]=\"make KERNELDIR=/usr/lib/modules/\$\{kernelver\}/build\"" src/dkms.conf
+    sed -i "s/^PACKAGE_VERSION=.*/PACKAGE_VERSION=$pkgver/" src/dkms.conf
+    cat >> src/dkms.conf <<'DKMS'
+# Match the toolchain used for the target kernel (e.g. CachyOS with Clang/LTO).
+if grep -qs '^CONFIG_CC_IS_CLANG=y' "/usr/lib/modules/${kernelver}/build/.config"; then
+    MAKE[0]+=" LLVM=1"
+fi
+DKMS
+}
+
+package() {
+    cd "$srcdir/hwsvideo"
+    local dest="$pkgdir/usr/src/hwsvideo-$pkgver"
+    install -d "$dest"
+    install -m644 src/Makefile src/dkms.conf src/*.c src/*.h "$dest/"
+    install -Dm644 packaging/hwsvideo.modprobe.conf "$pkgdir/etc/modprobe.d/hwsvideo.conf"
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+    install -m644 CHANGELOG.md "$pkgdir/usr/share/doc/$pkgname/"
+}

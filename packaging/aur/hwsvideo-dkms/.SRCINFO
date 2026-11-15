@@ -1,0 +1,25 @@
+pkgbase = hwsvideo-dkms
+	pkgdesc = V4L2 and ALSA driver for HWS PCIe capture cards (AVMatrix and ACASIS)
+	pkgver = 1.3.0
+	pkgrel = 1
+	url = https://github.com/Scyllinice/HWS_VIDEO_CAPTURE_GENERIC
+	install = hwsvideo-dkms.install
+	arch = x86_64
+	license = GPL-3.0-only
+	makedepends = git
+	depends = dkms
+	optdepends = linux-headers: build for the standard Arch kernel
+	optdepends = linux-lts-headers: build for the Arch LTS kernel
+	optdepends = clang: build for kernels compiled with Clang
+	optdepends = llvm: build for kernels compiled with Clang
+	optdepends = lld: link modules for kernels compiled with Clang
+	optdepends = mokutil: inspect Secure Boot state and enroll a certificate with shim/MOK
+	options = !strip
+	options = !debug
+	backup = etc/modprobe.d/hwsvideo.conf
+	source = hwsvideo::git+https://github.com/Scyllinice/HWS_VIDEO_CAPTURE_GENERIC.git#commit=ecf600c0ecdfb5044a5080180be95a164065690f
+	source = clang-timings.patch
+	sha256sums = SKIP
+	sha256sums = 53a69ec217c6a348610bd5d1ea346d14e530b2d2c5ecd0d367b7b94137f358bd
+
+pkgname = hwsvideo-dkms

@@ -44,6 +44,7 @@ Most IDs need subsystem 8888:0007; the AHD IDs need 8888:0008. `lspci -nn -d 888
 
 - **Architecture:** x86-64 only.
 - **Packages:** each [release](https://github.com/GloriousEggroll/HWS_VIDEO_CAPTURE_GENERIC/releases) has a package for Fedora 45 and 44, Debian 13 and 12, and Ubuntu 26.10 and 26.04.
+- **Arch Linux / CachyOS:** an AUR-ready DKMS package is in [`packaging/aur/`](packaging/aur/README.md), with build and installation instructions.
 - **Other builds:** `.github/workflows/build.yml` builds on every push against the newest Fedora, Arch, Ubuntu 24.04 (6.8) and 22.04 (5.15), Debian 12 (6.1), and CentOS Stream and AlmaLinux 9 (5.14) and 10 (6.12). The oldest kernel that builds is 5.14.
 
 ### Magewell cards
